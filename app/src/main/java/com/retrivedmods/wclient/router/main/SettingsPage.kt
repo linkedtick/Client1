@@ -13,6 +13,7 @@ import androidx.compose.material.icons.rounded.SaveAlt
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Upload
 import androidx.compose.material3.*
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -55,6 +56,15 @@ fun SettingsPageContent() {
         }
         var shortcutOpacity by remember {
             mutableFloatStateOf(prefs.getFloat("shortcut_opacity", 1f))
+        }
+
+        var lowEndMode by remember {
+            mutableStateOf(prefs.getBoolean("low_end_mode", false))
+        }
+
+        // Apply saved low-end mode to ModuleManager when the settings page loads.
+        LaunchedEffect(lowEndMode) {
+            ModuleManager.lowEndMode = lowEndMode
         }
 
         val importConfigPicker = rememberLauncherForActivityResult(
@@ -175,6 +185,44 @@ fun SettingsPageContent() {
                             )
                         }
                         Text("Classic", style = MaterialTheme.typography.bodyMedium, color = WColors.Secondary)
+                    }
+                }
+
+                OutlinedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { lowEndMode = !lowEndMode }
+                ) {
+                    Row(
+                        Modifier.padding(15.dp),
+                        horizontalArrangement = Arrangement.spacedBy(15.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Rounded.PowerSavingMode,
+                            null,
+                            tint = if (lowEndMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "Low-end mode",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                "Disables expensive visual effects (ESP boxes, tracers, minimap) for better performance on low-end devices",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        androidx.compose.material3.Switch(
+                            checked = lowEndMode,
+                            onCheckedChange = {
+                                lowEndMode = it
+                                ModuleManager.lowEndMode = it
+                                prefs.edit { putBoolean("low_end_mode", it) }
+                            }
+                        )
                     }
                 }
 

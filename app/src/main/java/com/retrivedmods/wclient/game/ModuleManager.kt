@@ -79,6 +79,10 @@ object ModuleManager {
 
     val modules: List<Module> = _modules
 
+    /// When true, expensive visual modules (ESP 3D boxes, tracers, minimap, nametags) are
+    /// automatically disabled to keep the client playable on low-end devices.
+    var lowEndMode by mutableStateOf(false)
+
     private val json = Json {
         prettyPrint = true
         ignoreUnknownKeys = true

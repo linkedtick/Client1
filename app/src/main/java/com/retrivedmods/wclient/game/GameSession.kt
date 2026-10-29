@@ -3,6 +3,7 @@ package com.retrivedmods.wclient.game
 import android.util.Log
 import com.retrivedmods.wclient.application.AppContext
 import com.retrivedmods.wclient.game.entity.LocalPlayer
+import com.retrivedmods.wclient.game.ModuleCategory
 import com.retrivedmods.wclient.game.registry.BlockMapping
 import com.retrivedmods.wclient.game.registry.BlockMappingProvider
 import com.retrivedmods.wclient.game.registry.ItemMapping
@@ -95,7 +96,14 @@ class GameSession(val wRelaySession: WRelaySession) : ComposedPacketHandler {
 
         val interceptablePacket = InterceptablePacket(packet)
 
-        for (module in ModuleManager.modules) {
+        // In low-end mode, skip expensive visual modules entirely to save CPU/GPU.
+        val activeModules = if (ModuleManager.lowEndMode) {
+            ModuleManager.modules.filter { it.category != ModuleCategory.Visual || !it.isEnabled }
+        } else {
+            ModuleManager.modules
+        }
+
+        for (module in activeModules) {
             // Set session if not already set
             if (!module.isSessionCreated) {
                 module.session = this

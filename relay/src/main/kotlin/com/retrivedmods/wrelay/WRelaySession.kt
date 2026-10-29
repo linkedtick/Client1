@@ -12,7 +12,6 @@ import org.cloudburstmc.protocol.bedrock.packet.BedrockPacketHandler
 import org.cloudburstmc.protocol.bedrock.packet.UnknownPacket
 import java.util.*
 
-
 class WRelaySession internal constructor(
     peer: BedrockPeer,
     subClientId: Int,
@@ -60,6 +59,11 @@ class WRelaySession internal constructor(
 
     private val packetQueue: Queue<Pair<BedrockPacket, Boolean>> = PlatformDependent.newMpscQueue()
     private val maxQueueSize = 1000
+
+    /// True when at least one packet listener is registered. Used to avoid the
+    /// per-packet UnknownPacket wrapping + buffer slicing overhead on the hot path.
+    internal val hasListeners: Boolean
+        get() = listeners.isNotEmpty()
 
     fun clientBound(packet: BedrockPacket) {
         try {
@@ -131,6 +135,14 @@ class WRelaySession internal constructor(
 
         override fun onPacket(wrapper: BedrockPacketWrapper) {
             try {
+                // Fast-path: when no listeners are registered, forward the packet
+                // directly without the UnknownPacket wrapping + retainedSlice() overhead.
+                if (!hasListeners) {
+                    val pkt = wrapper.packet
+                    serverBound(pkt)
+                    return
+                }
+
                 listeners.forEach { listener ->
                     try {
                         if (listener.beforeClientBound(wrapper.packet)) {
@@ -191,6 +203,14 @@ class WRelaySession internal constructor(
 
         override fun onPacket(wrapper: BedrockPacketWrapper) {
             try {
+                // Fast-path: when no listeners are registered, forward the packet
+                // directly without the UnknownPacket wrapping + retainedSlice() overhead.
+                if (!hasListeners) {
+                    val pkt = wrapper.packet
+                    clientBound(pkt)
+                    return
+                }
+
                 listeners.forEach { listener ->
                     try {
                         if (listener.beforeServerBound(wrapper.packet)) {
